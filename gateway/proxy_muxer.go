@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/TykTechnologies/tyk/analytics"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/TykTechnologies/tyk/analytics"
 
 	"golang.org/x/net/http2/h2c"
 

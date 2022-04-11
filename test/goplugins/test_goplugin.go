@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/TykTechnologies/tyk/analytics"
 	"github.com/TykTechnologies/tyk/ctx"
 	"github.com/TykTechnologies/tyk/headers"
 	"github.com/TykTechnologies/tyk/user"
 	"github.com/buger/jsonparser"
-	"io/ioutil"
-	"net/http"
 )
 
 // MyPluginPre checks if session is NOT present, adds custom header
@@ -172,14 +173,21 @@ func MyAnalyticsPluginMaskJSONLoginBody(record *analytics.Record) {
 	if err != nil {
 		return
 	}
-	const CRLF = "\r\n\r\n"
-	if i := bytes.Index(d, []byte(CRLF)); i > 0 || (i+4) < len(d) {
-		body, err := jsonparser.Set(d[i+4:],
-			[]byte("******"),
-			"email", "password", "data.email", "data.password", "body.email", "body.password",
-		)
+	var mask = []byte("\"****\"")
+	const endOfHeaders = "\r\n\r\n"
+	paths := [][]string{
+		{"email"},
+		{"password"},
+		{"data", "email"},
+		{"data", "password"},
+	}
+	if i := bytes.Index(d, []byte(endOfHeaders)); i > 0 || (i+4) < len(d) {
+		body := d[i+4:]
+		jsonparser.EachKey(body, func(idx int, _ []byte, _ jsonparser.ValueType, _ error) {
+			body, _ = jsonparser.Set(body, mask, paths[idx]...)
+		}, paths...)
 		if err == nil {
-			record.RawRequest = string(append(d[i:], body...))
+			record.RawRequest = base64.StdEncoding.EncodeToString(append(d[:i+4], body...))
 		}
 	}
 }
